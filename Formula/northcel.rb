@@ -104,6 +104,13 @@ class Northcel < Formula
       `ncel` is the same command. `northcel --no-native` (and `northcel fmt`) use
       the bundled Python reference implementation, which labels its output as
       non-native. macOS and Windows are not supported by this formula.
+
+      If `northcel doctor` reports "no libEGL.so.1 found", the launcher's platform
+      probe (ncel 0.2.1) only looks in the distribution's standard library paths.
+      Install the distribution's EGL runtime once and nothing else changes:
+        Debian/Ubuntu: sudo apt install libegl1 libgl1
+        Fedora/RHEL:   sudo dnf install mesa-libEGL mesa-dri-drivers
+      Rendering itself still uses the Mesa installed by this formula.
     EOS
   end
 
