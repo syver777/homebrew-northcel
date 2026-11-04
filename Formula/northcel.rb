@@ -117,7 +117,7 @@ class Northcel < Formula
   test do
     assert_match "0.2.1", shell_output("#{bin}/northcel version")
     assert_match "0.2.1", shell_output("#{bin}/ncel version")
-    system bin/"northcel", "doctor"
+    assert_match "\"ok\": true", shell_output("#{bin}/northcel doctor --json")
     system bin/"northcel", "verify"
 
     # A real render from the bundled fixture, through the installed command only.
