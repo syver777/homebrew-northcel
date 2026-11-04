@@ -21,6 +21,7 @@ class Northcel < Formula
   url "https://files.pythonhosted.org/packages/59/a9/8f1be6743916c73d7af84974264452975884eb4df15c2af86dc728df4dcc/northcel-0.2.1.tar.gz"
   sha256 "b9c5ff520e3926936242b7b34d2c9bc50983a2c469e0dfc75820686aeb08f66d"
   license any_of: ["MIT", "Apache-2.0"]
+  revision 1
 
   depends_on arch: :x86_64
   depends_on :linux
