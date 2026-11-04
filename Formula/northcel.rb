@@ -10,19 +10,20 @@
 #   brew install northcel          # or: brew install syver777/northcel/northcel
 #
 # `northcel` is the single install name; `ncel` is the short command alias the
-# package itself installs. Nothing is compiled here and nothing is downloaded on
-# first run: five sha256-pinned wheels go into a private venv.
+# package itself installs. The reference implementation is built from this
+# formula's own pinned sdist; the launcher and the native bundle are sha256-pinned
+# wheels. Nothing is downloaded on first run.
 class Northcel < Formula
   include Language::Python::Virtualenv
 
-  desc "Drawing language CLI for AI-drawn video, with a native MoonBit + Bend + GLSL runtime"
+  desc "Drawing language for AI-drawn video with a native MoonBit + Bend + GLSL runtime"
   homepage "https://northnoir.com/northcel"
   url "https://files.pythonhosted.org/packages/59/a9/8f1be6743916c73d7af84974264452975884eb4df15c2af86dc728df4dcc/northcel-0.2.1.tar.gz"
   sha256 "b9c5ff520e3926936242b7b34d2c9bc50983a2c469e0dfc75820686aeb08f66d"
   license any_of: ["MIT", "Apache-2.0"]
 
-  depends_on :linux
   depends_on arch: :x86_64
+  depends_on :linux
   depends_on "mesa" # libEGL + llvmpipe: the GL driver that compiles the GLSL
   depends_on "python@3.12" # the pinned wheels are cp312
 
@@ -38,12 +39,16 @@ class Northcel < Formula
     sha256 "42d63be3af4f9b951b199b0a9d23365d37ab14687e6d77b74940432c8515c4ca"
   end
 
-  # The Python reference parser/validator/formatter. It installs `northcel` and
-  # `ncel` scripts of its own; `ncel` is overwritten below by the launcher, which
-  # is a superset (it adds doctor/verify/guide/toolchain and native dispatch).
-  resource "northcel" do
-    url "https://files.pythonhosted.org/packages/81/40/d069656e05b755f930f5a2a38210bba4626de779d5467f72b1e30acccb59/northcel-0.2.1-py3-none-any.whl"
-    sha256 "d24a8ee793bcc0cbe5637b40686c8237833e115cf1f5ebfaca0990f81aa61472"
+  # Build tools for this formula's own sdist (the reference implementation), pinned
+  # so the install builds with `--no-build-isolation` and nothing else is fetched.
+  resource "setuptools" do
+    url "https://files.pythonhosted.org/packages/ef/55/6dc6d6bb953bdfc52519a0059592c52b6e3b8ad51cf8256dffceb55b0610/setuptools-84.2.1-py3-none-any.whl"
+    sha256 "ca140b45d5325a9478f880e351484f62fef15f336462e449ca0c03c873d589c2"
+  end
+
+  resource "wheel" do
+    url "https://files.pythonhosted.org/packages/2e/29/69cfbb602cd91690c55d38ba9fe53e6a7e76a6fa647bf38f19c138d25449/wheel-0.48.0-py3-none-any.whl"
+    sha256 "3217dcc807155e45db462d7ef2431f5ddda0d7273b700d05a67b271ceb1287ab"
   end
 
   # The native bundle: MoonBit-compiled typed AST stage, Bend 0.2.38, HVM 2.0.22,
@@ -54,23 +59,35 @@ class Northcel < Formula
   end
 
   # The launcher: platform verdict, native dispatch, labelled Python fallback,
-  # doctor/verify/check/info/render/film/fmt/guide/toolchain.
+  # doctor/verify/check/info/render/film/fmt/guide/toolchain. Installed last so
+  # its `ncel` script wins over the reference package's shorter one.
   resource "ncel" do
     url "https://files.pythonhosted.org/packages/75/fd/3dd3fe02ebd500cc7f05665542a3fbc7511484357ff075d554d5695a01ab/ncel-0.2.1-py3-none-any.whl"
     sha256 "85f5a73cd0745085a182731d8ff23e83a033c3a670fdecd319181cd57c8b46a1"
   end
 
   def install
-    # Install order matters: Homebrew pip runs with --no-deps, and the launcher
-    # must be last so its `ncel` script wins over the reference package's one.
     venv = virtualenv_create(libexec, "python3.12")
-    %w[numpy pillow northcel ncel-native ncel].each do |name|
-      venv.pip_install resource(name)
-    end
+
+    # Homebrew's pip runs with --no-deps, so every dependency is installed first
+    # and explicitly.
+    %w[numpy pillow setuptools wheel].each { |name| install_wheel(venv, name) }
+
+    # `buildpath` is this formula's pinned northcel sdist: the reference parser,
+    # validator, formatter and renderer (the conformance oracle).
+    venv.pip_install buildpath, build_isolation: false
+
+    %w[ncel-native ncel].each { |name| install_wheel(venv, name) }
+
+    # The declared `mesa` dependency is the GL runtime actually used: point the
+    # dynamic loader at it so this install is self-contained instead of quietly
+    # borrowing the distribution's Mesa. A Homebrew `mesa` upgrade is picked up
+    # through `opt_lib` without rebuilding this formula.
+    (bin/"northcel").write_env_script libexec/"bin/ncel",
+                                      LD_LIBRARY_PATH: "#{formula_opt_lib("mesa")}:${LD_LIBRARY_PATH}"
 
     # One install name: `northcel`. `ncel` stays as the package's short alias.
-    bin.install_symlink libexec/"bin/ncel" => "northcel"
-    bin.install_symlink libexec/"bin/ncel" => "ncel"
+    bin.install_symlink "northcel" => "ncel"
   end
 
   def caveats
@@ -92,7 +109,25 @@ class Northcel < Formula
 
   test do
     assert_match "0.2.1", shell_output("#{bin}/northcel version")
-    assert_match "\"ok\": true", shell_output("#{bin}/northcel doctor --json")
+    assert_match "0.2.1", shell_output("#{bin}/ncel version")
+    system bin/"northcel", "doctor"
     system bin/"northcel", "verify"
+
+    # A real render from the bundled fixture, through the installed command only.
+    starter = libexec/"lib/python3.12/site-packages/ncel/data/starter.ncel"
+    assert_path_exists starter
+    system bin/"northcel", "render", starter, "-o", testpath/"frame.png"
+    assert_path_exists testpath/"frame.png"
+  end
+
+  private
+
+  # Homebrew stages a resource into the download itself, so pip must be handed the
+  # .whl file inside that directory: pip cannot install a directory without a
+  # build system, which is what every prebuilt wheel would otherwise look like.
+  def install_wheel(venv, name)
+    resource(name).stage do
+      venv.pip_install Pathname.glob("*.whl").first
+    end
   end
 end
