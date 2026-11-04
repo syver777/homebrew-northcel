@@ -13,6 +13,10 @@
 # package itself installs. The reference implementation is built from this
 # formula's own pinned sdist; the launcher and the native bundle are sha256-pinned
 # wheels. Nothing is downloaded on first run.
+#
+# Upstream source, issues and releases: https://github.com/syver777/northcel
+# (`homepage` above is the live product page, which is what a tap visitor needs
+# today; it moves to the repository once the repository is published).
 class Northcel < Formula
   include Language::Python::Virtualenv
 

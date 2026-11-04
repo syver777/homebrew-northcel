@@ -1,5 +1,8 @@
 # Homebrew tap for NorthCel (.ncel)
 
+NorthCel lives at **https://github.com/syver777/northcel** (source, docs,
+releases); this repository only carries the Homebrew formula.
+
 `northcel` is the drawing language CLI for AI-drawn video: a `.ncel` scene is
 parsed by a MoonBit typed-AST stage, its swarms are evaluated by Bend 0.2.38 /
 HVM 2.0.22, and the contours are rasterised by GLSL 4.30 on Mesa's llvmpipe
