@@ -1,7 +1,8 @@
 # Homebrew tap for NorthCel (.ncel)
 
 NorthCel lives at **https://github.com/syver777/northcel** (source, docs,
-releases); this repository only carries the Homebrew formula.
+releases; also the formula's `homepage`), with the product page at
+https://northnoir.com/northcel. This repository only carries the Homebrew formula.
 
 `northcel` is the drawing language CLI for AI-drawn video: a `.ncel` scene is
 parsed by a MoonBit typed-AST stage, its swarms are evaluated by Bend 0.2.38 /

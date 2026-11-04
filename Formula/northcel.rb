@@ -15,13 +15,12 @@
 # wheels. Nothing is downloaded on first run.
 #
 # Upstream source, issues and releases: https://github.com/syver777/northcel
-# (`homepage` above is the live product page, which is what a tap visitor needs
-# today; it moves to the repository once the repository is published).
+# (the project home). The product page is https://northnoir.com/northcel.
 class Northcel < Formula
   include Language::Python::Virtualenv
 
   desc "Drawing language for AI-drawn video with a native MoonBit + Bend + GLSL runtime"
-  homepage "https://northnoir.com/northcel"
+  homepage "https://github.com/syver777/northcel"
   url "https://files.pythonhosted.org/packages/59/a9/8f1be6743916c73d7af84974264452975884eb4df15c2af86dc728df4dcc/northcel-0.2.1.tar.gz"
   sha256 "b9c5ff520e3926936242b7b34d2c9bc50983a2c469e0dfc75820686aeb08f66d"
   license any_of: ["MIT", "Apache-2.0"]
